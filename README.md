@@ -340,10 +340,13 @@ docker run -d -p 8080:80 \
 |------|------|
 | `ENABLE_API_PROXY=true` | 开启 Nginx 同源代理，请求发往 `/api-proxy/{路径}` 再转发到 `API_PROXY_URL` |
 | `API_PROXY_URL` | 代理转发的完整 API 基础地址（不自动补 `/v1`） |
-| `LOCK_API_PROXY=true` | 强制开启代理，用户无法关闭；需同时设置 `ENABLE_API_PROXY=true` |
+| `API_PROXY_GOOGLE_URL` | Google 原生代理的基础地址；默认由 `API_PROXY_URL` 派生 `/v1beta`，可填写同一网关的内网地址以绕过公网 CDN |
+| `LOCK_API_PROXY=true` | 强制所有配置使用固定网关并锁定 API URL，仍可切换服务商和配置；需同时设置 `ENABLE_API_PROXY=true` |
 | `HOST` / `PORT` | Nginx 监听地址和端口，默认 `0.0.0.0:80` |
 
 > 开启 API 代理后，任何人都能将你的服务器作为代理来请求目标 API。建议仅在有访问控制（如 IP 白名单）或本地网络中开启。
+
+固定代理支持 OpenAI 兼容接口、xAI、Google 和字节跳动。xAI 与字节跳动使用网关的 Images API；Google 使用同一网关的 `/v1beta` 原生接口。模型名需填写网关实际支持的 ID。fal.ai 队列协议和异步自定义服务商在固定代理下会提示不支持，不会使用保存的官网地址。用户保存的直连地址不会被显示地址覆盖。
 
 > 旧版 `API_URL` 已拆分为 `DEFAULT_API_URL` 和 `API_PROXY_URL`，容器启动时自动兼容，无需立即修改。
 

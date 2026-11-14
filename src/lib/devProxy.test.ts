@@ -1,5 +1,7 @@
-import { describe, expect, it } from 'vitest'
-import { buildApiUrl, normalizeBaseUrl } from './devProxy'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { buildApiUrl, getLockedApiUrl, normalizeBaseUrl } from './devProxy'
+
+afterEach(() => vi.unstubAllEnvs())
 
 describe('normalizeBaseUrl', () => {
   it('preserves a trailing slash used for direct endpoint joining', () => {
@@ -15,6 +17,25 @@ describe('normalizeBaseUrl', () => {
 })
 
 describe('buildApiUrl', () => {
+  it('固定代理忽略原生服务商地址和保存的关闭状态', () => {
+    vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
+    expect(buildApiUrl('https://api.x.ai/v1', 'images/generations', null, false)).toBe('/api-proxy/images/generations')
+    expect(buildApiUrl('https://ark.example.com/api/v3', 'images/generations', null, false, 'v3')).toBe('/api-proxy/images/generations')
+    expect(buildApiUrl('https://generativelanguage.googleapis.com/v1beta', 'models/gemini:generateContent', null, false, 'v1beta')).toBe('/api-proxy-google/models/gemini:generateContent')
+    expect(buildApiUrl('https://old.example.com', 'tasks/task-1', null, false)).toBe('/api-proxy/tasks/task-1')
+  })
+
+  it('固定代理显示地址与原生协议路径一致', () => {
+    vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
+    vi.stubEnv('VITE_API_PROXY_URL', 'https://gateway.example.com/proxy/v1')
+    expect(getLockedApiUrl()).toBe('https://gateway.example.com/proxy/v1')
+    expect(getLockedApiUrl('v1beta')).toBe('https://gateway.example.com/proxy/v1beta')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'false')
+    expect(getLockedApiUrl()).toBeUndefined()
+  })
+
   it('uses the same-origin proxy prefix when API proxy is enabled', () => {
     expect(buildApiUrl('http://api.example.com/v1', 'images/edits', null, true)).toBe(
       '/api-proxy/images/edits',

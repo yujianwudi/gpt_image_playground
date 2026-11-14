@@ -38,6 +38,7 @@ export function isAsyncCustomProvider(provider: CustomProviderDefinition | null 
 }
 
 export function isProfileApiProxyEligible(settings: AppSettings, profile: ApiProfile) {
+  if (isApiProxyLocked()) return true
   if (!isOpenAICompatibleProvider(settings, profile.provider)) return false
   const customProvider = getCustomProviderDefinition(settings, profile.provider)
   return !isAsyncCustomProvider(customProvider)
