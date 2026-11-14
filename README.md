@@ -340,6 +340,7 @@ docker run -d -p 8080:80 \
 |------|------|
 | `ENABLE_API_PROXY=true` | 开启 Nginx 同源代理，请求发往 `/api-proxy/{路径}` 再转发到 `API_PROXY_URL` |
 | `API_PROXY_URL` | 代理转发的完整 API 基础地址（不自动补 `/v1`） |
+| `API_PROXY_GOOGLE_URL` | Google 原生代理的基础地址；默认由 `API_PROXY_URL` 派生 `/v1beta`，可填写同一网关的内网地址以绕过公网 CDN |
 | `LOCK_API_PROXY=true` | 强制所有配置使用固定网关并锁定 API URL，仍可切换服务商和配置；需同时设置 `ENABLE_API_PROXY=true` |
 | `HOST` / `PORT` | Nginx 监听地址和端口，默认 `0.0.0.0:80` |
 

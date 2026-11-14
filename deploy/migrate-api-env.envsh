@@ -12,11 +12,13 @@ fi
 API_PROXY_URL=${API_PROXY_URL:-${API_URL:-https://api.openai.com/v1}}
 
 export DEFAULT_API_URL
-API_PROXY_GOOGLE_URL=${API_PROXY_URL%/}
-case "$API_PROXY_GOOGLE_URL" in
-    */v1) API_PROXY_GOOGLE_URL=${API_PROXY_GOOGLE_URL%/v1}/v1beta ;;
-    *) API_PROXY_GOOGLE_URL=$API_PROXY_GOOGLE_URL/v1beta ;;
-esac
+if [ -z "$API_PROXY_GOOGLE_URL" ]; then
+    API_PROXY_GOOGLE_URL=${API_PROXY_URL%/}
+    case "$API_PROXY_GOOGLE_URL" in
+        */v1) API_PROXY_GOOGLE_URL=${API_PROXY_GOOGLE_URL%/v1}/v1beta ;;
+        *) API_PROXY_GOOGLE_URL=$API_PROXY_GOOGLE_URL/v1beta ;;
+    esac
+fi
 
 export API_PROXY_GOOGLE_URL
 export API_PROXY_URL
