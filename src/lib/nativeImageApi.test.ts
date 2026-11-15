@@ -285,6 +285,46 @@ describe('OpenAI Images 模型适配', () => {
 })
 
 describe('异步任务和自定义多模型映射', () => {
+  it('Google 原生协议通过固定网关保留鉴权和请求体', async () => {
+    vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: 'aW1hZ2U=' } }] } }] }))
+    const config = settings({ provider: 'google', model: 'gemini-3.1-flash-image', baseUrl: 'https://old.example.com/v1beta', apiProxy: false })
+    const result = await callImageApi({ settings: config, prompt: '猫', params: DEFAULT_PARAMS, inputImageDataUrls: [] })
+    expect(result.images).toEqual([PNG])
+    expect(fetchMock.mock.calls[0][0]).toBe('/api-proxy-google/models/gemini-3.1-flash-image:generateContent')
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('x-goog-api-key')).toBe('test-key')
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body)).contents[0].parts).toEqual([{ text: '生成图像：\n猫' }])
+    expect(config.profiles[0].baseUrl).toBe('https://old.example.com/v1beta')
+  })
+
+  it('字节跳动原生请求使用固定网关的 Images API', async () => {
+    vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ data: [{ b64_json: 'aW1hZ2U=' }] }))
+    await callImageApi({ settings: settings({ provider: 'bytedance', model: 'doubao-seedream-5-5', apiProxy: false }), prompt: '猫', params: DEFAULT_PARAMS, inputImageDataUrls: [] })
+    expect(fetchMock.mock.calls[0][0]).toBe('/api-proxy/images/generations')
+    expect(new Headers(fetchMock.mock.calls[0][1]?.headers).get('authorization')).toBe('Bearer test-key')
+  })
+
+  it('固定代理下的原生异步任务恢复仍使用同一个网关', async () => {
+    vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ data: { status: 'completed', result: { images: [{ url: PNG }] } } }))
+    const config = settings({ provider: 'xai', model: 'grok-imagine-image-2.0', apiProxy: false })
+    await getCustomQueuedImageResult(getActiveApiProfile(config), OPENAI_IMAGE_TASK_PROVIDER, 'task-1', DEFAULT_PARAMS)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api-proxy/tasks/task-1')
+  })
+
+  it('不支持的队列协议在固定代理下不会发送到外部服务', async () => {
+    vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
+    vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
+    const fetchMock = vi.spyOn(globalThis, 'fetch')
+    await expect(callImageApi({ settings: settings({ provider: 'fal', model: 'fal-ai/nano-banana-2' }), prompt: '猫', params: DEFAULT_PARAMS, inputImageDataUrls: [] })).rejects.toThrow('不支持 fal.ai 队列协议')
+    await expect(callImageApi({ settings: settings(EXAMPLE_CONFIG.profiles[0], EXAMPLE_CONFIG.customProviders), prompt: '猫', params: DEFAULT_PARAMS, inputImageDataUrls: [] })).rejects.toThrow('不支持使用异步任务')
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('多张异步生成保留 n，并取回同一任务的全部图片', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(json({ data: [{ task_id: 'example-task' }] }))
@@ -306,12 +346,12 @@ describe('异步任务和自定义多模型映射', () => {
     expect(fetchMock.mock.calls.map(([url]) => url)).toEqual(['/api-proxy/images/generations', '/api-proxy/tasks/example-task', '/api-proxy/tasks/example-task'])
   })
 
-  it('xAI 官方入口不使用锁定的 OpenAI 代理', async () => {
+  it('xAI 原生入口使用固定代理', async () => {
     vi.stubEnv('VITE_API_PROXY_AVAILABLE', 'true')
     vi.stubEnv('VITE_API_PROXY_LOCKED', 'true')
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ data: [{ b64_json: 'aW1hZ2U=' }] }))
     await callImageApi({ settings: settings({ provider: 'xai', model: 'grok-imagine-image-2.0' }), prompt: '猫', params: DEFAULT_PARAMS, inputImageDataUrls: [] })
-    expect(fetchMock.mock.calls[0][0]).toBe('https://example.com/v1/images/generations')
+    expect(fetchMock.mock.calls[0][0]).toBe('/api-proxy/images/generations')
   })
 
   it('接受任务对象形式的 ID 和字符串结果链接', async () => {

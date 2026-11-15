@@ -6,6 +6,7 @@ import { getImageModelFamily, isGptImage25PlusModel, isGptImage26PlusModel } fro
 import { getImageModelParams, getSeedreamSize } from './imageModelParams'
 import { getImageSearchSupport, getImageThinkingSupport, parseImageSearchGrounding } from './imageSearch'
 import { apiFetch } from './platform'
+import { isApiProxyLocked } from './devProxy'
 import {
   assertImageInputPayloadSize,
   assertMaskEditFileSize,
@@ -50,6 +51,7 @@ function mapFalQuality(quality: TaskParams['quality'], model: string): 'low' | '
 }
 
 function configureFal(profile: ApiProfile) {
+  if (isApiProxyLocked()) throw new Error('当前固定网关不支持 fal.ai 队列协议，请选择 OpenAI 兼容接口并填写网关支持的模型。')
   const baseUrl = profile.baseUrl.trim().replace(/\/+$/, '') || DEFAULT_FAL_BASE_URL
   const config: Parameters<typeof fal.config>[0] = {
     credentials: profile.apiKey,

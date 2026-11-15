@@ -6,7 +6,7 @@ import { normalizeBaseUrl } from '../lib/api'
 import { customProviderSupportsNativeTransparentBackground } from '../lib/customProviderCapabilities'
 import { hasActiveDataOperations, trackDataTransfer } from '../lib/dataOperations'
 import { useSettingsDataTransfer } from '../lib/dataProgress'
-import { isApiProxyAvailable, isApiProxyLocked, readClientDevProxyConfig } from '../lib/devProxy'
+import { getLockedApiUrl, isApiProxyAvailable, isApiProxyLocked, readClientDevProxyConfig } from '../lib/devProxy'
 import { DEFAULT_SVG_MODEL, getEffectiveImageGenerationModel, getImageModelFamily, isGptImage26PlusModel } from '../lib/imageModels'
 import { isTauri } from '../lib/platform'
 import { useStore, exportData, importData, clearData, type SettingsTab } from '../store'
@@ -1474,7 +1474,7 @@ export default function SettingsModal() {
                     <span className="block text-sm text-gray-600 dark:text-gray-300">API URL</span>
                   </div>
                   <input
-                    value={activeProfile.baseUrl}
+                    value={getLockedApiUrl(activeProfile.provider === 'google' ? 'v1beta' : 'v1') ?? activeProfile.baseUrl}
                     onChange={(e) => updateActiveProfile({ baseUrl: e.target.value })}
                     onBlur={(e) => commitActiveProfilePatch({ baseUrl: e.target.value })}
                     type="text"
@@ -1483,7 +1483,9 @@ export default function SettingsModal() {
                     className={`w-full rounded-xl border border-transparent bg-black/[0.04] px-3 py-2.5 text-sm text-gray-700 outline-none transition focus:border-blue-300 dark:bg-white/[0.06] dark:text-gray-200 dark:focus:border-blue-500/50 ${apiProxyEnabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                   />
                   <div data-selectable-text className="mt-1.5 min-h-[22px] flex items-center text-xs leading-6 text-gray-500 dark:text-gray-500">
-                    {apiProxyEnabled ? (
+                    {apiProxyLocked && activeProfile.provider === 'fal' ? (
+                      <span className="text-yellow-600 dark:text-yellow-500">当前固定网关不支持 fal.ai 队列协议，请选择 OpenAI 兼容接口并填写网关支持的模型。</span>
+                    ) : apiProxyEnabled ? (
                       <span className="text-yellow-600 dark:text-yellow-500">已开启代理，实际请求目标由部署端决定，此处设置被忽略。</span>
                     ) : activeProfile.provider === 'fal' ? (
                       <span>默认使用 <code className="bg-gray-100 dark:bg-white/[0.06] px-1 py-0.5 rounded">{DEFAULT_FAL_BASE_URL}</code>；填写自定义地址时将作为 fal.ai 代理 URL。</span>
@@ -1497,7 +1499,7 @@ export default function SettingsModal() {
               )}
 
               {/* 4. API 代理（紧跟 URL） */}
-              {apiProxyAvailable && activeProviderIsOpenAICompatible && !activeCustomProviderAsync && (
+              {apiProxyAvailable && (apiProxyLocked || (activeProviderIsOpenAICompatible && !activeCustomProviderAsync)) && (
                 <div className="block">
                   <div className="mb-1.5 flex items-center justify-between">
                     <span className="block text-sm text-gray-600 dark:text-gray-300">API 代理</span>

@@ -67,8 +67,9 @@ export function buildApiUrl(
   const trimmedBaseUrl = baseUrl.trim()
   const endpointPath = path.replace(/^\/+/, '')
 
-  if (useApiProxy) {
-    return `${proxyConfig?.prefix ?? DEFAULT_PROXY_PREFIX}/${endpointPath}`
+  if (useApiProxy || isApiProxyLocked(proxyConfig)) {
+    const prefix = apiVersion === 'v1beta' ? '/api-proxy-google' : proxyConfig?.prefix ?? DEFAULT_PROXY_PREFIX
+    return `${prefix}/${endpointPath}`
   }
 
   const normalizedBaseUrl = normalizeBaseUrl(trimmedBaseUrl, apiVersion)
@@ -103,6 +104,20 @@ export function isApiProxyAvailable(proxyConfig: DevProxyConfig | null = readCli
 
 export function isApiProxyLocked(proxyConfig: DevProxyConfig | null = readClientDevProxyConfig()): boolean {
   return readRuntimeEnv(import.meta.env.VITE_API_PROXY_LOCKED) === 'true' && isApiProxyAvailable(proxyConfig)
+}
+
+/** 固定代理的显示地址不覆盖用户保存的直连配置。 */
+export function getLockedApiUrl(apiVersion = 'v1'): string | undefined {
+  if (!isApiProxyLocked()) return undefined
+  const target = readRuntimeEnv(import.meta.env.VITE_API_PROXY_URL)
+  if (!target) return undefined
+  const url = new URL(target)
+  url.search = ''
+  url.hash = ''
+  url.username = ''
+  url.password = ''
+  if (apiVersion === 'v1beta') url.pathname = `${url.pathname.replace(/\/+$/, '').replace(/\/v1$/, '')}/v1beta`
+  return url.toString().replace(/\/$/, '')
 }
 
 export function shouldUseApiProxy(apiProxy: boolean, proxyConfig: DevProxyConfig | null = readClientDevProxyConfig()): boolean {

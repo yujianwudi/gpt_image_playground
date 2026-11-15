@@ -85,6 +85,7 @@ case "$DEFAULT_API_URL_TRIMMED" in
         ;;
 esac
 DEFAULT_API_URL_ESCAPED=$(escape_sed_replacement "$(escape_js_string "$DEFAULT_API_URL")")
+API_PROXY_URL_ESCAPED=$(escape_sed_replacement "$(escape_js_string "$API_PROXY_URL")")
 # 默认字体：builtin / system，其他值视为字体名称；留空时前端按 builtin 处理
 DEFAULT_UI_FONT_ESCAPED=$(escape_sed_replacement "$(escape_js_string "$DEFAULT_UI_FONT")")
 DEFAULT_MONO_FONT_ESCAPED=$(escape_sed_replacement "$(escape_js_string "$DEFAULT_MONO_FONT")")
@@ -104,6 +105,8 @@ find /usr/share/nginx/html/assets -type f -name "*.js" -exec sed -i "s|__VITE_PR
 find /usr/share/nginx/html/assets -type f -name "*.js" -exec sed -i "s|__VITE_DEFAULT_UI_FONT_PLACEHOLDER__|$DEFAULT_UI_FONT_ESCAPED|g" {} +
 find /usr/share/nginx/html/assets -type f -name "*.js" -exec sed -i "s|__VITE_DEFAULT_MONO_FONT_PLACEHOLDER__|$DEFAULT_MONO_FONT_ESCAPED|g" {} +
 find /usr/share/nginx/html/assets -type f -name "*.js" -exec sed -i "s|__VITE_BUILTIN_FONT_SOURCE_PLACEHOLDER__|$BUILTIN_FONT_SOURCE_ESCAPED|g" {} +
+
+find /usr/share/nginx/html/assets -type f -name "*.js" -exec sed -i "s|__VITE_API_PROXY_URL_PLACEHOLDER__|$API_PROXY_URL_ESCAPED|g" {} +
 
 # 检查是否启用了 API 代理
 if [ "$ENABLE_API_PROXY" != "true" ]; then
